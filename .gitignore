@@ -1,0 +1,30 @@
+# Rust / Anchor build artifacts
+target/
+.anchor/
+
+# Wallet keypairs — NEVER commit these
+deploy-wallet.json
+fee-recipient-wallet.json
+**/*-wallet.json
+**/*.keypair
+**/*.key
+**/*.pem
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Misc
+*.gz
+*.zip
+*.tar
