@@ -9,7 +9,7 @@ pub struct VaultState {
     pub nonce: u64,
     #[max_len(50)]
     pub pending_transactions: Vec<u64>,
-    #[max_len(50)]
+    #[max_len(20)]
     pub name: String,
 }
 
@@ -87,7 +87,7 @@ pub struct BalancedVaultState {
     pub allocations: Vec<TokenAllocation>,
     pub is_active: bool,
     pub created_at: i64,
-    #[max_len(50)]
+    #[max_len(20)]
     pub name: String,
     pub bump: u8,
     pub nonce: u64,

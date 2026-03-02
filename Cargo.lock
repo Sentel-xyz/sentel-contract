@@ -1280,6 +1280,7 @@ dependencies = [
  "constant_time_eq",
  "indexmap 1.9.3",
  "sha3",
+ "solana-security-txt",
 ]
 
 [[package]]

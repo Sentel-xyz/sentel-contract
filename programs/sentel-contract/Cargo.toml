@@ -27,6 +27,7 @@ indexmap = "1.9"
 sha3 = "0.10"
 blake3 = { workspace = true }
 constant_time_eq = { workspace = true }
+solana-security-txt = "1.1.2"
 
 
 [lints.rust]

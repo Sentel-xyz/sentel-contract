@@ -22,7 +22,7 @@ pub fn create_vault(
     );
     require!(!owners.is_empty(), CustomError::EmptyOwners);
     require!(owners.len() <= 10, CustomError::TooManyOwners);
-    require!(name.len() <= 50, CustomError::NameTooLong);
+    require!(name.len() <= 20, CustomError::NameTooLong);
     require!(!name.trim().is_empty(), CustomError::EmptyName);
 
     vault.owners = owners;

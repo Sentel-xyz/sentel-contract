@@ -9,6 +9,19 @@ use contexts::*;
 
 declare_id!("Engn3cBYZPvP37myVuiwanqhs2omZxWRS7twNRJX8uZV");
 
+#[cfg(not(feature = "no-entrypoint"))]
+use solana_security_txt::security_txt;
+
+#[cfg(not(feature = "no-entrypoint"))]
+security_txt! {
+    name: "Sentel",
+    project_url: "https://sentel.xyz",
+    contacts: "email:security@sentel.xyz",
+    policy: "https://sentel.xyz/legal/security",
+    source_code: "https://github.com/Sentel-xyz/sentel-contract",
+    auditors: "None"
+}
+
 pub const PROTOCOL_FEE_RECIPIENT: &str = "BdXd6EzjCFhLmMDF1D2vm2zDrPuCzfHxyAezvPMudaU8";
 pub const PROTOCOL_FEE_BASIS_POINTS: u64 = 5;
 pub const MIN_FEE_LAMPORTS: u64 = 5_000_000;

@@ -50,7 +50,7 @@ pub enum CustomError {
     TooManyPendingTransactions,
     #[msg("Transaction has not expired yet")]
     TransactionNotExpired,
-    #[msg("Vault name is too long - maximum of 50 characters allowed")]
+    #[msg("Vault name is too long - maximum of 20 characters allowed")]
     NameTooLong,
     #[msg("Vault name cannot be empty")]
     EmptyName,

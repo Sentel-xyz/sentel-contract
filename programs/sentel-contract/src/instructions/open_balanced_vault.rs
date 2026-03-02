@@ -19,7 +19,7 @@ pub fn open_balanced_vault(
         threshold > 0 && threshold <= owners.len() as u8,
         CustomError::InvalidThreshold
     );
-    require!(name.len() <= 50, CustomError::NameTooLong);
+    require!(name.len() <= 20, CustomError::NameTooLong);
     require!(!name.trim().is_empty(), CustomError::EmptyName);
     require!(allocations.len() <= 10, CustomError::TooManyAllocations);
     require!(!allocations.is_empty(), CustomError::InvalidAllocationTotal);
