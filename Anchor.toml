@@ -19,7 +19,7 @@ sentel_contract = "Engn3cBYZPvP37myVuiwanqhs2omZxWRS7twNRJX8uZV"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "mainnet"
 wallet = "./deploy-wallet.json"
 
 [scripts]
