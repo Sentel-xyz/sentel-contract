@@ -2,8 +2,8 @@
 
 Anchor program powering the Sentel protocol on Solana. Two vault types:
 
-- **Standard multisig vault** — holds SOL and SPL tokens, releases funds only after m-of-n owner approval.
-- **Balanced vault** — holds a portfolio of SPL tokens at target allocations (basis points), rebalanced via Jupiter V6.
+- **Standard multisig vault** holds SOL and SPL tokens, releases funds only after m-of-n owner approval.
+- **Balanced vault** holds a portfolio of SPL tokens at target allocations (basis points), rebalanced via Jupiter V6.
 
 ## Deployment
 
@@ -19,7 +19,7 @@ Every value-moving action follows the same lifecycle:
 propose -> approve (m-of-n) -> execute
 ```
 
-Cancellation also requires a threshold vote — a single owner cannot unilaterally cancel a proposal.
+Cancellation also requires a threshold vote a single owner cannot unilaterally cancel a proposal.
 
 Proposals expire after **7 days**. Expired proposals can be cleaned up by anyone to recover rent.
 
@@ -45,7 +45,7 @@ SPL token transfers and wraps apply the minimum fee floor. SOL transfers are pro
 | `propose_transaction`    | Propose a SOL or SPL token transfer.                                                                                    |
 | `approve_transaction`    | Vote to approve a pending transfer.                                                                                     |
 | `execute_transaction`    | Execute once the approval threshold is met.                                                                             |
-| `cancel_transaction`     | Vote to cancel — removed from pending at threshold.                                                                     |
+| `cancel_transaction`     | Vote to cancel removed from pending at threshold.                                                                       |
 | `cleanup_expired`        | Reclaim rent from a proposal older than 7 days.                                                                         |
 | `close_vault`            | Close the vault and return rent. Requires no pending transactions, all token accounts empty, and balance below 0.3 SOL. |
 | `get_vault_info`         | Emit a `VaultInfoEvent` with current vault state.                                                                       |

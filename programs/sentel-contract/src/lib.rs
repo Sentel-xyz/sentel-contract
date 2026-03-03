@@ -16,7 +16,7 @@ use solana_security_txt::security_txt;
 security_txt! {
     name: "Sentel",
     project_url: "https://sentel.xyz",
-    contacts: "email:security@sentel.xyz",
+    contacts: "email:sentel_xyz@proton.me",
     policy: "https://sentel.xyz/legal/security",
     source_code: "https://github.com/Sentel-xyz/sentel-contract",
     auditors: "None"
@@ -369,5 +369,49 @@ pub mod sentel_contract {
         transaction_nonce: u64,
     ) -> Result<()> {
         instructions::close_zombie_retrieve(ctx, vault_id, transaction_nonce)
+    }
+
+    // ============================================
+    // Rebalance Proposal Instructions (multisig)
+    // ============================================
+
+    pub fn propose_rebalance(
+        ctx: Context<ProposeRebalance>,
+        vault_id: u64,
+        proposal_nonce: u64,
+    ) -> Result<()> {
+        instructions::propose_rebalance(ctx, vault_id, proposal_nonce)
+    }
+
+    pub fn approve_rebalance(
+        ctx: Context<ApproveRebalance>,
+        vault_id: u64,
+        proposal_nonce: u64,
+    ) -> Result<()> {
+        instructions::approve_rebalance(ctx, vault_id, proposal_nonce)
+    }
+
+    pub fn cancel_rebalance(
+        ctx: Context<CancelRebalance>,
+        vault_id: u64,
+        proposal_nonce: u64,
+    ) -> Result<()> {
+        instructions::cancel_rebalance(ctx, vault_id, proposal_nonce)
+    }
+
+    pub fn execute_rebalance<'info>(
+        ctx: Context<'_, '_, '_, 'info, ExecuteRebalance<'info>>,
+        vault_id: u64,
+        proposal_nonce: u64,
+        jupiter_swap_data: Vec<Vec<u8>>,
+        swap_account_counts: Vec<u32>,
+    ) -> Result<()> {
+        instructions::execute_rebalance(
+            ctx,
+            vault_id,
+            proposal_nonce,
+            jupiter_swap_data,
+            swap_account_counts,
+        )
     }
 }

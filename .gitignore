@@ -2,7 +2,7 @@
 target/
 .anchor/
 
-# Wallet keypairs — NEVER commit these
+# Wallet keypairs  NEVER commit these
 deploy-wallet.json
 fee-recipient-wallet.json
 **/*-wallet.json

@@ -104,4 +104,10 @@ pub enum CustomError {
     AlreadyCancelledVote,
     #[msg("Proposal has been cancelled by threshold vote")]
     ProposalCancelled,
+    #[msg("A rebalance proposal is already pending - cancel or execute it first")]
+    RebalanceAlreadyPending,
+    #[msg("Rebalance proposal not found or already executed")]
+    RebalanceProposalNotFound,
+    #[msg("Insufficient approvals to execute rebalance")]
+    InsufficientApprovalsForRebalance,
 }

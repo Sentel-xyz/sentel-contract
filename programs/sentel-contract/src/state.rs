@@ -95,6 +95,22 @@ pub struct BalancedVaultState {
     pub pending_transactions: Vec<u64>,
 }
 
+/// Rebalance proposal for balanced vaults - multisig gate for the rebalance_vault instruction
+#[account]
+#[derive(InitSpace)]
+pub struct RebalanceProposalState {
+    pub id: u64,
+    pub proposer: Pubkey,
+    #[max_len(10)]
+    pub approvals: Vec<Pubkey>,
+    /// Owners who have voted to cancel. Reaches threshold -> proposal is cancelled.
+    #[max_len(10)]
+    pub cancellations: Vec<Pubkey>,
+    pub executed: bool,
+    pub created_at: i64,
+    pub expires_at: i64,
+}
+
 /// Retrieve transaction for balanced vaults - swaps all tokens to WSOL and sends to recipient
 #[account]
 #[derive(InitSpace)]
