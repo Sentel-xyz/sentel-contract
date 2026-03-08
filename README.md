@@ -62,20 +62,26 @@ SPL token transfers and wraps apply the minimum fee floor. SOL transfers are pro
 
 ### Balanced vault
 
-| Instruction                    | Description                                                                 |
-| ------------------------------ | --------------------------------------------------------------------------- |
-| `open_balanced_vault`          | Create a balanced vault with up to 10 token allocations (must sum to 100%). |
-| `close_balanced_vault`         | Close the vault and return rent.                                            |
-| `update_allocations`           | Update target allocations. Callable by any vault owner.                     |
-| `wrap_sol_for_rebalance`       | Wrap vault SOL to WSOL before rebalancing.                                  |
-| `unwrap_wsol_for_rebalance`    | Unwrap vault WSOL back to SOL.                                              |
-| `rebalance_vault`              | Rebalance all positions via Jupiter V6.                                     |
-| `swap_token_to_wsol`           | Swap a single token to WSOL.                                                |
-| `propose_retrieve_transaction` | Propose full withdrawal to a recipient.                                     |
-| `approve_retrieve_transaction` | Vote to approve a pending withdrawal.                                       |
-| `cancel_retrieve_transaction`  | Vote to cancel a pending withdrawal.                                        |
-| `execute_retrieve_transaction` | Liquidate all positions to SOL and send to recipient.                       |
-| `close_zombie_retrieve`        | Reclaim rent from an already-executed retrieve PDA.                         |
+| Instruction                    | Description                                                                                                                  |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| `open_balanced_vault`          | Create a balanced vault with up to 10 token allocations (must sum to 100%).                                                  |
+| `close_balanced_vault`         | Close the vault and return rent.                                                                                             |
+| `update_allocations`           | Update target allocations. Callable by any vault owner.                                                                      |
+| `wrap_sol_for_rebalance`       | Wrap vault SOL to WSOL before rebalancing. Charges the protocol fee.                                                         |
+| `unwrap_wsol_for_rebalance`    | Unwrap vault WSOL back to SOL.                                                                                               |
+| `rebalance_vault`              | Legacy single-tx rebalance (all swaps in one instruction). Closes proposal PDA.                                              |
+| `propose_rebalance`            | Create a multisig rebalance proposal with swap routes.                                                                       |
+| `approve_rebalance`            | Vote to approve a pending rebalance proposal.                                                                                |
+| `cancel_rebalance`             | Vote to cancel a pending rebalance proposal.                                                                                 |
+| `execute_rebalance`            | Execute all swaps in one instruction (single-swap fast path).                                                                |
+| `execute_rebalance_swap`       | Execute exactly one Jupiter swap from an approved proposal. Increments `swaps_executed` counter. Does **not** close the PDA. |
+| `finalize_rebalance`           | Validate all swaps are done (`swaps_executed == total_swaps`), then close the proposal PDA. Rent returned to executor.       |
+| `swap_token_to_wsol`           | Swap a single token to WSOL.                                                                                                 |
+| `propose_retrieve_transaction` | Propose full withdrawal to a recipient.                                                                                      |
+| `approve_retrieve_transaction` | Vote to approve a pending withdrawal.                                                                                        |
+| `cancel_retrieve_transaction`  | Vote to cancel a pending withdrawal.                                                                                         |
+| `execute_retrieve_transaction` | Liquidate all positions to SOL and send to recipient.                                                                        |
+| `close_zombie_retrieve`        | Reclaim rent from an already-executed retrieve PDA.                                                                          |
 
 ## Build and test
 
@@ -90,7 +96,7 @@ anchor test
 Tests run against a local validator. All 30 instructions are covered across three test files.
 
 ```bash
-anchor deploy --provider.cluster mainnet
+anchor test
 ```
 
 ## License

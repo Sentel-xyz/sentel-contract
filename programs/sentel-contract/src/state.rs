@@ -109,6 +109,8 @@ pub struct RebalanceProposalState {
     pub executed: bool,
     pub created_at: i64,
     pub expires_at: i64,
+    /// Number of individual swaps that have been executed so far (used by execute_rebalance_swap).
+    pub swaps_executed: u32,
 }
 
 /// Retrieve transaction for balanced vaults - swaps all tokens to WSOL and sends to recipient

@@ -414,4 +414,36 @@ pub mod sentel_contract {
             swap_account_counts,
         )
     }
+
+    /// Execute a single Jupiter swap from an approved rebalance proposal.
+    /// Call once per allocation; the proposal PDA stays open until `finalize_rebalance`.
+    pub fn execute_rebalance_swap<'info>(
+        ctx: Context<'_, '_, '_, 'info, ExecuteRebalanceSwap<'info>>,
+        vault_id: u64,
+        proposal_nonce: u64,
+        swap_index: u32,
+        total_swaps: u32,
+        jupiter_swap_data: Vec<u8>,
+        swap_account_count: u32,
+    ) -> Result<()> {
+        instructions::execute_rebalance_swap(
+            ctx,
+            vault_id,
+            proposal_nonce,
+            swap_index,
+            total_swaps,
+            jupiter_swap_data,
+            swap_account_count,
+        )
+    }
+
+    /// Close the rebalance proposal PDA after all swaps have been executed via
+    /// `execute_rebalance_swap`. Rent is returned to the executor.
+    pub fn finalize_rebalance(
+        ctx: Context<FinalizeRebalance>,
+        vault_id: u64,
+        proposal_nonce: u64,
+    ) -> Result<()> {
+        instructions::finalize_rebalance(ctx, vault_id, proposal_nonce)
+    }
 }
