@@ -27,6 +27,7 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { expect } from "chai";
+import { EMPTY_COMMITMENT } from "../helpers/commitment";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -209,7 +210,7 @@ describe("Balanced Vault Retrieval Flow", () => {
     );
 
     await program.methods
-      .proposeRetrieveTransaction(vaultId, retrievalNonce, recipient.publicKey)
+      .proposeRetrieveTransaction(vaultId, retrievalNonce, recipient.publicKey, [])
       .accountsPartial({
         balancedVault: balancedVaultPda,
         retrieveTransaction: retrieveTransactionPda,
@@ -361,7 +362,7 @@ describe("Balanced Vault Retrieval Flow", () => {
     expect(await provider.connection.getAccountInfo(newPda)).to.be.null;
 
     await program.methods
-      .proposeRetrieveTransaction(vaultId, nextNonce, recipient.publicKey)
+      .proposeRetrieveTransaction(vaultId, nextNonce, recipient.publicKey, [])
       .accountsPartial({
         balancedVault: balancedVaultPda,
         retrieveTransaction: newPda,
