@@ -18,9 +18,11 @@ sentel_contract = "Engn3cBYZPvP37myVuiwanqhs2omZxWRS7twNRJX8uZV"
 [registry]
 url = "https://api.apr.dev"
 
+# `anchor test` runs against a local validator. Deploys override this, e.g.
+#   anchor deploy --provider.cluster mainnet --provider.wallet ./deploy-wallet.json
 [provider]
-cluster = "mainnet"
-wallet = "./deploy-wallet.json"
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/**/*.ts\""

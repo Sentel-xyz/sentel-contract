@@ -1,6 +1,8 @@
 # Rust / Anchor build artifacts
 target/
 .anchor/
+test-ledger/
+validator.log
 
 # Wallet keypairs  NEVER commit these
 deploy-wallet.json
