@@ -9,10 +9,10 @@ use std::str::FromStr;
 /// at propose-time so that `execute_swap` can treat it as a normal WSOL->Token swap.
 ///
 /// Anchor performs the `init` CPI to system_program first (before our handler code),
-/// then our handler does only lamport mutations  no additional CPI after that, which
+/// then our handler does only lamport mutations no additional CPI after that, which
 /// satisfies the Solana runtime constraint.
 #[derive(Accounts)]
-#[instruction(output_mint: Pubkey, sol_amount: u64, minimum_output_amount: u64, vault_id: u64, creator: Pubkey)]
+#[instruction(output_mint: Pubkey, sol_amount: u64, minimum_output_amount: u64, payload_hash: [u8; 32], vault_id: u64, creator: Pubkey)]
 pub struct ProposeSolSwap<'info> {
     #[account(
         mut,
@@ -21,7 +21,7 @@ pub struct ProposeSolSwap<'info> {
     )]
     pub vault: Account<'info, VaultState>,
 
-    /// The swap PDA  seeded on vault key + current nonce so every proposal is unique.
+    /// The swap PDA seeded on vault key + current nonce so every proposal is unique.
     #[account(
         init,
         payer = proposer,
@@ -31,7 +31,7 @@ pub struct ProposeSolSwap<'info> {
     )]
     pub swap_transaction: Account<'info, SwapTransactionState>,
 
-    /// The vault's WSOL ATA  must be owned by the vault PDA and use the canonical WSOL mint.
+    /// The vault's WSOL ATA must be owned by the vault PDA and use the canonical WSOL mint.
     #[account(
         mut,
         constraint = vault_wsol_account.owner == vault.key() @ crate::errors::CustomError::InvalidTokenAccount,

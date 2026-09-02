@@ -1,3 +1,4 @@
+use crate::commitment::swap_commitment;
 use crate::contexts::ExecuteRebalanceSwap;
 use crate::errors::CustomError;
 use crate::instructions::jupiter_account_meta;
@@ -6,16 +7,15 @@ use anchor_lang::solana_program::{instruction::Instruction, program::invoke_sign
 use anchor_spl::token::{sync_native, SyncNative};
 use std::str::FromStr;
 
-/// Execute a single Jupiter swap from an approved rebalance proposal, without closing the PDA.
-/// Call once per allocation. After all swaps are done, call `finalize_rebalance` to close the PDA.
+/// Executes one Jupiter swap from an approved rebalance proposal without closing the PDA.
+/// Call once per authorised swap, in order, then `finalize_rebalance` to close the PDA.
 ///
-/// `swap_index`  zero-based index of the swap being executed (must equal `swaps_executed`).
+/// `swap_index` is zero-based and must equal the proposal's `swaps_executed`.
 pub fn execute_rebalance_swap<'info>(
     ctx: Context<'_, '_, '_, 'info, ExecuteRebalanceSwap<'info>>,
     vault_id: u64,
     proposal_nonce: u64,
     swap_index: u32,
-    total_swaps: u32,
     jupiter_swap_data: Vec<u8>,
     swap_account_count: u32,
 ) -> Result<()> {
@@ -62,13 +62,16 @@ pub fn execute_rebalance_swap<'info>(
             CustomError::InsufficientApprovalsForRebalance
         );
 
-        // Enforce sequential execution: swap_index must match swaps_executed counter.
+        // Sequential execution keeps swap_index aligned with the committed hash list.
         require!(
             swap_index == rebalance_proposal.swaps_executed,
-            CustomError::InvalidAmount // re-use generic error; no "wrong swap index" variant yet
+            CustomError::InvalidSwapIndex
         );
 
-        require!(total_swaps > 0, CustomError::InvalidAmount);
+        require!(
+            swap_index < rebalance_proposal.total_swaps,
+            CustomError::InvalidSwapIndex
+        );
     }
 
     let jupiter_program_id = Pubkey::from_str(crate::JUPITER_V6_PROGRAM_ID)
@@ -116,7 +119,13 @@ pub fn execute_rebalance_swap<'info>(
 
     require!(
         remaining_accounts.len() == count,
-        CustomError::InvalidAmount
+        CustomError::SwapAccountCountMismatch
+    );
+
+    require!(
+        swap_commitment(&jupiter_swap_data, remaining_accounts)
+            == ctx.accounts.rebalance_proposal.payload_hashes[swap_index as usize],
+        CustomError::SwapPayloadMismatch
     );
 
     let swap_accounts: Vec<_> = remaining_accounts
@@ -135,6 +144,7 @@ pub fn execute_rebalance_swap<'info>(
     // Increment the counter. If all swaps are done, mark executed so finalize_rebalance
     // can verify everything ran (and so a stale proposal can't be re-executed).
     ctx.accounts.rebalance_proposal.swaps_executed += 1;
+    let total_swaps = ctx.accounts.rebalance_proposal.total_swaps;
     if ctx.accounts.rebalance_proposal.swaps_executed >= total_swaps {
         ctx.accounts.rebalance_proposal.executed = true;
     }

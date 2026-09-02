@@ -2,7 +2,7 @@ use crate::state::{SwapTransactionState, VaultState};
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
-#[instruction(input_mint: Pubkey, output_mint: Pubkey, input_amount: u64, minimum_output_amount: u64, vault_id: u64, creator: Pubkey)]
+#[instruction(input_mint: Pubkey, output_mint: Pubkey, input_amount: u64, minimum_output_amount: u64, payload_hash: [u8; 32], vault_id: u64, creator: Pubkey)]
 pub struct ProposeSwap<'info> {
     // Vault PDA seeded on creator so all owners derive the same canonical address.
     #[account(

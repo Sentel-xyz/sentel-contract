@@ -35,6 +35,11 @@ pub fn execute_wrap(
         CustomError::InsufficientApprovals
     );
 
+    require!(
+        ctx.accounts.vault.pending_transactions.contains(&wrap_id),
+        CustomError::ProposalCancelled
+    );
+
     let fee_amount = crate::MIN_FEE_LAMPORTS;
     let total_deduction = amount
         .checked_add(fee_amount)

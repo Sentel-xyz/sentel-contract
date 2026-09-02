@@ -12,7 +12,7 @@ pub struct FinalizeRebalance<'info> {
     )]
     pub balanced_vault: Account<'info, BalancedVaultState>,
 
-    /// The rebalance proposal  must be fully executed (all swaps done). Closed here.
+    /// The rebalance proposal must be fully executed (all swaps done). Closed here.
     #[account(
         mut,
         close = executor,

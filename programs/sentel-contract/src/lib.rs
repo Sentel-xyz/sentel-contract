@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 
+pub mod commitment;
 pub mod contexts;
 pub mod errors;
 pub mod instructions;
@@ -165,6 +166,7 @@ pub mod sentel_contract {
         output_mint: Pubkey,
         input_amount: u64,
         minimum_output_amount: u64,
+        payload_hash: [u8; 32],
         vault_id: u64,
         creator: Pubkey,
     ) -> Result<()> {
@@ -174,19 +176,19 @@ pub mod sentel_contract {
             output_mint,
             input_amount,
             minimum_output_amount,
+            payload_hash,
             vault_id,
             creator,
         )
     }
 
-    /// Propose a swap from native SOL to any SPL token.
-    /// The SOL is atomically wrapped to WSOL (with protocol fee) at propose-time.
-    /// After approval, call `execute_swap` with WSOL as the input mint.
+    /// Wraps the SOL to WSOL at propose time, so `execute_swap` sees a WSOL input.
     pub fn propose_sol_swap(
         ctx: Context<ProposeSolSwap>,
         output_mint: Pubkey,
         sol_amount: u64,
         minimum_output_amount: u64,
+        payload_hash: [u8; 32],
         vault_id: u64,
         creator: Pubkey,
     ) -> Result<()> {
@@ -195,6 +197,7 @@ pub mod sentel_contract {
             output_mint,
             sol_amount,
             minimum_output_amount,
+            payload_hash,
             vault_id,
             creator,
         )
@@ -264,10 +267,6 @@ pub mod sentel_contract {
         instructions::cancel_wrap(ctx, creator, vault_id, wrap_nonce)
     }
 
-    // ============================================
-    // Balanced Vault Instructions
-    // ============================================
-
     pub fn open_balanced_vault(
         ctx: Context<OpenBalancedVault>,
         vault_id: u64,
@@ -283,14 +282,6 @@ pub mod sentel_contract {
         instructions::close_balanced_vault(ctx, vault_id)
     }
 
-    pub fn rebalance_vault<'info>(
-        ctx: Context<'_, '_, '_, 'info, RebalanceVault<'info>>,
-        vault_id: u64,
-        jupiter_swap_data: Vec<Vec<u8>>,
-        swap_account_counts: Vec<u32>,
-    ) -> Result<()> {
-        instructions::rebalance_vault(ctx, vault_id, jupiter_swap_data, swap_account_counts)
-    }
 
     pub fn wrap_sol_for_rebalance(ctx: Context<WrapSolForRebalance>, vault_id: u64) -> Result<()> {
         instructions::wrap_sol_for_rebalance(ctx, vault_id)
@@ -311,22 +302,21 @@ pub mod sentel_contract {
         instructions::update_allocations(ctx, vault_id, new_allocations)
     }
 
-    pub fn swap_token_to_wsol<'info>(
-        ctx: Context<'_, '_, '_, 'info, SwapTokenToWsol<'info>>,
-        vault_id: u64,
-        jupiter_swap_data: Vec<u8>,
-        swap_account_count: u32,
-    ) -> Result<()> {
-        instructions::swap_token_to_wsol(ctx, vault_id, jupiter_swap_data, swap_account_count)
-    }
 
     pub fn propose_retrieve_transaction(
         ctx: Context<ProposeRetrieveTransaction>,
         vault_id: u64,
         transaction_nonce: u64,
         recipient: Pubkey,
+        payload_hashes: Vec<[u8; 32]>,
     ) -> Result<()> {
-        instructions::propose_retrieve_transaction(ctx, vault_id, transaction_nonce, recipient)
+        instructions::propose_retrieve_transaction(
+            ctx,
+            vault_id,
+            transaction_nonce,
+            recipient,
+            payload_hashes,
+        )
     }
 
     pub fn approve_retrieve_transaction(
@@ -361,8 +351,7 @@ pub mod sentel_contract {
         )
     }
 
-    /// Close an already-executed retrieve transaction PDA that was never reclaimed.
-    /// Any vault owner can call this to unblock future proposals.
+    /// Reclaims an executed retrieve PDA that was never closed, unblocking new proposals.
     pub fn close_zombie_retrieve(
         ctx: Context<CloseZombieRetrieve>,
         vault_id: u64,
@@ -371,16 +360,13 @@ pub mod sentel_contract {
         instructions::close_zombie_retrieve(ctx, vault_id, transaction_nonce)
     }
 
-    // ============================================
-    // Rebalance Proposal Instructions (multisig)
-    // ============================================
-
     pub fn propose_rebalance(
         ctx: Context<ProposeRebalance>,
         vault_id: u64,
         proposal_nonce: u64,
+        payload_hashes: Vec<[u8; 32]>,
     ) -> Result<()> {
-        instructions::propose_rebalance(ctx, vault_id, proposal_nonce)
+        instructions::propose_rebalance(ctx, vault_id, proposal_nonce, payload_hashes)
     }
 
     pub fn approve_rebalance(
@@ -415,14 +401,12 @@ pub mod sentel_contract {
         )
     }
 
-    /// Execute a single Jupiter swap from an approved rebalance proposal.
-    /// Call once per allocation; the proposal PDA stays open until `finalize_rebalance`.
+    /// Runs one swap of an approved proposal; the PDA stays open until finalised.
     pub fn execute_rebalance_swap<'info>(
         ctx: Context<'_, '_, '_, 'info, ExecuteRebalanceSwap<'info>>,
         vault_id: u64,
         proposal_nonce: u64,
         swap_index: u32,
-        total_swaps: u32,
         jupiter_swap_data: Vec<u8>,
         swap_account_count: u32,
     ) -> Result<()> {
@@ -431,14 +415,12 @@ pub mod sentel_contract {
             vault_id,
             proposal_nonce,
             swap_index,
-            total_swaps,
             jupiter_swap_data,
             swap_account_count,
         )
     }
 
-    /// Close the rebalance proposal PDA after all swaps have been executed via
-    /// `execute_rebalance_swap`. Rent is returned to the executor.
+    /// Closes a fully executed rebalance proposal, returning rent to the executor.
     pub fn finalize_rebalance(
         ctx: Context<FinalizeRebalance>,
         vault_id: u64,

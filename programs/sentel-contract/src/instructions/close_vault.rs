@@ -11,7 +11,11 @@ pub fn close_vault<'info>(
     let vault = &ctx.accounts.vault;
     let creator_signer = &ctx.accounts.creator_signer;
 
-    // Check that there are no pending transactions
+    require!(
+        vault.owners.contains(&creator_signer.key()),
+        CustomError::UnauthorizedCreator
+    );
+
     require!(
         vault.pending_transactions.is_empty(),
         CustomError::VaultHasPendingTransactions
@@ -81,20 +85,7 @@ pub fn close_vault<'info>(
         timestamp: clock.unix_timestamp,
     });
 
-    if current_balance > 0 {
-        let creator_info = creator_signer.to_account_info();
-        let creator_balance = creator_info.lamports();
-
-        require!(
-            creator_balance.checked_add(current_balance).is_some(),
-            CustomError::InsufficientFunds
-        );
-
-        **vault_info.try_borrow_mut_lamports()? = 0;
-        **creator_info.try_borrow_mut_lamports()? = creator_balance
-            .checked_add(current_balance)
-            .ok_or(CustomError::InsufficientFunds)?;
-    }
-
+    // The remaining balance goes to creator_signer via the `close` constraint on the
+    // account, which also zeroes the discriminator so the PDA cannot be revived.
     Ok(())
 }

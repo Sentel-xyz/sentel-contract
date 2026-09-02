@@ -5,7 +5,7 @@ use std::str::FromStr;
 /// Proposes a native-SOL-to-token swap for a standard multisig vault.
 ///
 /// The SOL is wrapped to WSOL atomically at propose-time:
-///   vault lamports -> vault WSOL ATA (sol_amount)
+/// vault lamports -> vault WSOL ATA (sol_amount)
 ///
 /// No fee is charged here. The protocol fee is collected at execution time
 /// in `execute_swap`, after the Jupiter swap succeeds.
@@ -18,6 +18,7 @@ pub fn propose_sol_swap(
     output_mint: Pubkey,
     sol_amount: u64,
     minimum_output_amount: u64,
+    payload_hash: [u8; 32],
     _vault_id: u64,
     _creator: Pubkey,
 ) -> Result<()> {
@@ -46,11 +47,8 @@ pub fn propose_sol_swap(
     let spendable = vault_lamports.saturating_sub(rent_exempt);
     require!(spendable >= sol_amount, CustomError::InsufficientFunds);
 
-    // ── Atomic lamport wrap ──────────────────────────────────────────────────
-    // NOTE: Anchor has already executed the `init` CPI (system_program::create_account
-    // for swap_transaction) before this handler runs. No further CPI is issued below,
-    // so the Solana runtime constraint "no CPI after lamport mutation on token accounts"
-    // is satisfied.
+    // Anchor has already run the `init` CPI for swap_transaction by this point, and no
+    // further CPI is issued below, so mutating lamports directly here is safe.
 
     let wsol_info = ctx.accounts.vault_wsol_account.to_account_info();
 
@@ -63,9 +61,8 @@ pub fn propose_sol_swap(
         .checked_add(sol_amount)
         .ok_or(CustomError::InsufficientFunds)?;
 
-    // ── Initialise the swap PDA ──────────────────────────────────────────────
-    // input_mint = WSOL so that execute_swap can use the standard path with
-    // vault_input_token_account = vault's WSOL ATA.
+    // input_mint is WSOL so execute_swap takes the standard path with
+    // vault_input_token_account set to the vault's WSOL ATA.
     let clock = Clock::get()?;
 
     swap_transaction.id = vault.nonce;
@@ -74,6 +71,7 @@ pub fn propose_sol_swap(
     swap_transaction.output_mint = output_mint;
     swap_transaction.input_amount = sol_amount;
     swap_transaction.minimum_output_amount = minimum_output_amount;
+    swap_transaction.payload_hash = payload_hash;
     swap_transaction.approvals = Vec::new();
     swap_transaction.cancellations = Vec::new();
     swap_transaction.executed = false;

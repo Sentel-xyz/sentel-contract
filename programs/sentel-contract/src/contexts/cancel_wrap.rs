@@ -11,7 +11,7 @@ pub struct CancelWrap<'info> {
     )]
     pub vault: Account<'info, VaultState>,
 
-    // No `close`  -  account stays alive while cancel votes accumulate
+    // No `close` -  account stays alive while cancel votes accumulate
     #[account(
         mut,
         seeds = [b"wrap", vault.key().as_ref(), &wrap_nonce.to_le_bytes()],

@@ -7,6 +7,7 @@ pub fn propose_retrieve_transaction(
     _vault_id: u64,
     transaction_nonce: u64,
     recipient: Pubkey,
+    payload_hashes: Vec<[u8; 32]>,
 ) -> Result<()> {
     let balanced_vault = &mut ctx.accounts.balanced_vault;
     let retrieve_transaction = &mut ctx.accounts.retrieve_transaction;
@@ -29,11 +30,13 @@ pub fn propose_retrieve_transaction(
         CustomError::InvalidNonce
     );
 
-    // Block duplicate proposals  only one pending retrieval allowed at a time
+    // Only one pending retrieval at a time.
     require!(
         balanced_vault.pending_transactions.is_empty(),
         CustomError::RetrievalAlreadyPending
     );
+
+    require!(payload_hashes.len() <= 10, CustomError::TooManySwaps);
 
     let clock = Clock::get()?;
     let current_time = clock.unix_timestamp;
@@ -48,6 +51,7 @@ pub fn propose_retrieve_transaction(
     retrieve_transaction.executed = false;
     retrieve_transaction.created_at = current_time;
     retrieve_transaction.expires_at = expiration_time;
+    retrieve_transaction.payload_hashes = payload_hashes;
 
     // Add to pending transactions and increment nonce atomically.
     balanced_vault.pending_transactions.push(transaction_nonce);

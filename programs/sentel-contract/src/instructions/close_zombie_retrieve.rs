@@ -18,8 +18,8 @@ pub fn close_zombie_retrieve(
     );
 
     // Allow closing if:
-    //   (a) already executed  -  rent reclaim after successful retrieve, OR
-    //   (b) expired and not executed  -  unblocks vault from a permanently stale proposal
+    // (a) already executed -  rent reclaim after successful retrieve, OR
+    // (b) expired and not executed -  unblocks vault from a permanently stale proposal
     let clock = Clock::get()?;
     let is_executed = retrieve_transaction.executed;
     let is_expired = clock.unix_timestamp > retrieve_transaction.expires_at;

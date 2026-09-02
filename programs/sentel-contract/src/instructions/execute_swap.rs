@@ -1,4 +1,5 @@
-use crate::{contexts::ExecuteSwap, errors::CustomError, instructions::jupiter_account_meta};
+use crate::commitment::swap_commitment;
+use crate::{contexts::ExecuteSwap, errors::CustomError};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{instruction::Instruction, program::invoke_signed};
 use anchor_spl::token;
@@ -11,7 +12,6 @@ pub fn execute_swap<'info>(
     _swap_nonce: u64,
     jupiter_instruction_data: Vec<u8>,
 ) -> Result<()> {
-    // ── Validation ───────────────────────────────────────────────────────────
     require!(
         ctx.accounts
             .vault
@@ -44,12 +44,27 @@ pub fn execute_swap<'info>(
         CustomError::InsufficientApprovalsForSwap
     );
 
-    // ── Capture fields we need after mutable borrows are released ─────────────
+    require!(
+        ctx.accounts
+            .vault
+            .pending_transactions
+            .contains(&ctx.accounts.swap_transaction.id),
+        CustomError::ProposalCancelled
+    );
+
+    // The owners approved one specific route. Anything else is a different swap.
+    require!(
+        swap_commitment(&jupiter_instruction_data, ctx.remaining_accounts)
+            == ctx.accounts.swap_transaction.payload_hash,
+        CustomError::SwapPayloadMismatch
+    );
+
     let wsol_mint = Pubkey::from_str(crate::WSOL_MINT).unwrap();
     let input_is_wsol = ctx.accounts.swap_transaction.input_mint == wsol_mint;
     let output_is_wsol = ctx.accounts.swap_transaction.output_mint == wsol_mint;
     let swap_id = ctx.accounts.swap_transaction.id;
     let input_amount = ctx.accounts.swap_transaction.input_amount;
+    let minimum_output_amount = ctx.accounts.swap_transaction.minimum_output_amount;
 
     let vault_id_bytes = vault_id.to_le_bytes();
     let seeds = &[
@@ -60,7 +75,6 @@ pub fn execute_swap<'info>(
     ];
     let signer_seeds = &[&seeds[..]];
 
-    // ── sync_native if input is WSOL ─────────────────────────────────────────
     if input_is_wsol {
         token::sync_native(CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
@@ -71,12 +85,17 @@ pub fn execute_swap<'info>(
         ))?;
     }
 
-    // ── Jupiter CPI ──────────────────────────────────────────────────────────
+    // Snapshot after sync_native so a WSOL input reflects the wrapped lamports.
+    ctx.accounts.vault_input_token_account.reload()?;
+    ctx.accounts.vault_output_token_account.reload()?;
+    let input_before = ctx.accounts.vault_input_token_account.amount;
+    let output_before = ctx.accounts.vault_output_token_account.amount;
+
     let vault_key = ctx.accounts.vault.key();
     let jupiter_accounts: Vec<_> = ctx
         .remaining_accounts
         .iter()
-        .map(|acc| jupiter_account_meta(acc, &vault_key))
+        .map(|acc| crate::instructions::jupiter_account_meta(acc, &vault_key))
         .collect();
 
     let jupiter_ix = Instruction {
@@ -87,28 +106,34 @@ pub fn execute_swap<'info>(
 
     invoke_signed(&jupiter_ix, ctx.remaining_accounts, signer_seeds)?;
 
-    // ── Mark executed & update pending list (mutable borrow scope) ───────────
+    // Verify the economics the owners approved actually held, rather than trusting
+    // the route to have been honest about them.
+    ctx.accounts.vault_input_token_account.reload()?;
+    ctx.accounts.vault_output_token_account.reload()?;
+
+    let input_spent = input_before.saturating_sub(ctx.accounts.vault_input_token_account.amount);
+    let output_gained = ctx
+        .accounts
+        .vault_output_token_account
+        .amount
+        .saturating_sub(output_before);
+
+    require!(input_spent <= input_amount, CustomError::SwapInputExceeded);
+    require!(
+        output_gained >= minimum_output_amount,
+        CustomError::SwapOutputBelowMinimum
+    );
+
     {
         let vault = &mut ctx.accounts.vault;
         let swap_transaction = &mut ctx.accounts.swap_transaction;
 
         swap_transaction.executed = true;
+        vault.pending_transactions.retain(|&id| id != swap_id);
+    }
 
-        if let Some(pos) = vault
-            .pending_transactions
-            .iter()
-            .position(|&x| x == swap_id)
-        {
-            vault.pending_transactions.remove(pos);
-        }
-    } // <- mutable borrows of vault and swap_transaction are released here
-
-    // ── Unwrap WSOL -> native SOL if output was WSOL ──────────────────────────
-    // Must happen BEFORE the fee lamport mutation below.
-    // close_account returns all lamports (SOL) to the vault PDA via a CPI,
-    // which the runtime accounts for cleanly. If we did the raw lamport debit
-    // first, the runtime's balance check fires before close_account can restore
-    // the total, causing "sum of account balances do not match".
+    // Unwrap before the fee debit below. close_account returns the lamports through a
+    // CPI; debiting first makes the runtime's balance check fire before that lands.
     if output_is_wsol {
         token::close_account(CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
@@ -121,10 +146,7 @@ pub fn execute_swap<'info>(
         ))?;
     }
 
-    // ── Protocol fee ─────────────────────────────────────────────────────────
-    // Charged on the input amount (SOL/WSOL lamports being swapped).
-    // 5 bps of input, clamped between MIN_FEE_LAMPORTS and MAX_FEE_LAMPORTS.
-    // Deducted from the vault's native SOL balance after the swap succeeds.
+    // 5 bps of the input, clamped, taken from the vault's native SOL balance.
     let raw_fee = input_amount
         .saturating_mul(crate::PROTOCOL_FEE_BASIS_POINTS)
         .checked_div(10_000)

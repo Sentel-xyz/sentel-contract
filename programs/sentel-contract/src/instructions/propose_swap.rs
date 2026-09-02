@@ -8,6 +8,7 @@ pub fn propose_swap(
     output_mint: Pubkey,
     input_amount: u64,
     minimum_output_amount: u64,
+    payload_hash: [u8; 32],
     _vault_id: u64,
     _creator: Pubkey,
 ) -> Result<()> {
@@ -27,9 +28,8 @@ pub fn propose_swap(
         CustomError::TooManyPendingTransactions
     );
 
-    // The last remaining account is the vault's input token account (SPL Token program owned).
-    // Only the accounts before it are pending transaction PDAs owned by this program.
-    // C-1: Enforce program ownership on all PDA accounts, but not on the token account.
+    // The last remaining account is the vault's input token account, owned by the SPL
+    // Token program. Everything before it must be a pending proposal PDA owned by us.
     let pending_accounts = if !ctx.remaining_accounts.is_empty() {
         &ctx.remaining_accounts[..ctx.remaining_accounts.len() - 1]
     } else {
@@ -68,7 +68,7 @@ pub fn propose_swap(
         }
     }
 
-    // Token balance check is mandatory  fail hard if no valid token account is provided.
+    // No token account means no balance check, so refuse rather than skip it.
     let last_account = ctx
         .remaining_accounts
         .last()
@@ -101,6 +101,7 @@ pub fn propose_swap(
     swap_transaction.output_mint = output_mint;
     swap_transaction.input_amount = input_amount;
     swap_transaction.minimum_output_amount = minimum_output_amount;
+    swap_transaction.payload_hash = payload_hash;
     swap_transaction.approvals = Vec::new();
     swap_transaction.cancellations = Vec::new();
     swap_transaction.executed = false;

@@ -12,7 +12,7 @@ pub struct CancelRetrieveTransaction<'info> {
     )]
     pub balanced_vault: Account<'info, BalancedVaultState>,
 
-    // No `close`  -  account stays alive while cancel votes accumulate
+    // No `close` -  account stays alive while cancel votes accumulate
     #[account(
         mut,
         seeds = [

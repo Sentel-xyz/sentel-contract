@@ -12,8 +12,9 @@ pub fn finalize_rebalance(
     let rebalance_proposal = &ctx.accounts.rebalance_proposal;
 
     require!(
-        rebalance_proposal.executed,
-        CustomError::TransactionAlreadyExecuted // proposal not fully executed yet
+        rebalance_proposal.executed
+            && rebalance_proposal.swaps_executed >= rebalance_proposal.total_swaps,
+        CustomError::RebalanceNotFullyExecuted
     );
 
     require!(
@@ -24,7 +25,7 @@ pub fn finalize_rebalance(
         CustomError::Unauthorized
     );
 
-    // Remove from pending_transactions  same cleanup as execute_rebalance does.
+    // Remove from pending_transactions same cleanup as execute_rebalance does.
     let proposal_id = rebalance_proposal.id;
     ctx.accounts
         .balanced_vault

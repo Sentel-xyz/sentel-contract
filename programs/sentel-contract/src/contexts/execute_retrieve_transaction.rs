@@ -35,7 +35,7 @@ pub struct ExecuteRetrieveTransaction<'info> {
     )]
     pub vault_wsol_account: Account<'info, TokenAccount>,
 
-    /// CHECK: Native SOL recipient  receives unwrapped SOL after WSOL close
+    /// CHECK: Native SOL recipient receives unwrapped SOL after WSOL close
     #[account(mut)]
     pub recipient: UncheckedAccount<'info>,
 
