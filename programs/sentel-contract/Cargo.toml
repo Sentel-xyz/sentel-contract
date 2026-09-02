@@ -23,10 +23,14 @@ custom-panic = []
 [dependencies]
 anchor-lang = "0.32.1"
 anchor-spl = { version = "0.32.1", features = ["token", "associated_token"] }
-indexmap = "1.9"
-sha3 = "0.10"
+# Not used directly. These are version ceilings: the rustc that ships with the Solana
+# platform tools is older than the latest releases of these crates require, so they are
+# pinned in [workspace.dependencies] to versions that still build for the SBF target.
+# Removing them makes `cargo-build-sbf` fail to resolve.
 blake3 = { workspace = true }
 constant_time_eq = { workspace = true }
+indexmap = { workspace = true }
+solana-sha256-hasher = "2.3.0"
 solana-security-txt = "1.1.2"
 
 

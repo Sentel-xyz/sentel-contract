@@ -14,7 +14,7 @@ pub struct ExecuteRebalanceSwap<'info> {
     )]
     pub balanced_vault: Account<'info, BalancedVaultState>,
 
-    /// The approved rebalance proposal. NOT closed here  stays open until finalize_rebalance.
+    /// The approved rebalance proposal. NOT closed here stays open until finalize_rebalance.
     #[account(
         mut,
         seeds = [

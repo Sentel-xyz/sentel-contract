@@ -20,7 +20,7 @@ pub struct ExecuteWrap<'info> {
     )]
     pub wrap_transaction: Account<'info, WrapTransactionState>,
 
-    // The vault's WSOL token account  must be owned by the vault PDA and use the canonical WSOL mint.
+    // The vault's WSOL token account must be owned by the vault PDA and use the canonical WSOL mint.
     // This prevents an attacker from substituting an arbitrary account to redirect lamports.
     #[account(
         mut,

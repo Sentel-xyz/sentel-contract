@@ -41,6 +41,9 @@ pub struct SwapTransactionState {
     pub output_mint: Pubkey,
     pub input_amount: u64,
     pub minimum_output_amount: u64,
+    /// Commitment to the Jupiter payload and account list this swap authorises.
+    /// See `commitment::swap_commitment`.
+    pub payload_hash: [u8; 32],
     #[max_len(10)]
     pub approvals: Vec<Pubkey>,
     /// Owners who have voted to cancel. Reaches threshold -> proposal is cancelled.
@@ -95,7 +98,7 @@ pub struct BalancedVaultState {
     pub pending_transactions: Vec<u64>,
 }
 
-/// Rebalance proposal for balanced vaults - multisig gate for the rebalance_vault instruction
+/// Approved rebalance: the swaps a threshold of owners authorised, in order.
 #[account]
 #[derive(InitSpace)]
 pub struct RebalanceProposalState {
@@ -109,11 +112,16 @@ pub struct RebalanceProposalState {
     pub executed: bool,
     pub created_at: i64,
     pub expires_at: i64,
-    /// Number of individual swaps that have been executed so far (used by execute_rebalance_swap).
+    /// Number of individual swaps executed so far, used by `execute_rebalance_swap`.
     pub swaps_executed: u32,
+    /// Number of swaps this proposal authorises. Fixed at propose time.
+    pub total_swaps: u32,
+    /// One commitment per authorised swap, in execution order.
+    #[max_len(10)]
+    pub payload_hashes: Vec<[u8; 32]>,
 }
 
-/// Retrieve transaction for balanced vaults - swaps all tokens to WSOL and sends to recipient
+/// Approved full withdrawal: liquidate every position to WSOL, unwrap, pay the recipient.
 #[account]
 #[derive(InitSpace)]
 pub struct RetrieveTransactionState {
@@ -128,4 +136,7 @@ pub struct RetrieveTransactionState {
     pub executed: bool,
     pub created_at: i64,
     pub expires_at: i64,
+    /// One commitment per authorised liquidation swap, in execution order.
+    #[max_len(10)]
+    pub payload_hashes: Vec<[u8; 32]>,
 }

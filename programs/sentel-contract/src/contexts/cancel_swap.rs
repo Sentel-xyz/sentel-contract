@@ -11,7 +11,7 @@ pub struct CancelSwap<'info> {
     )]
     pub vault: Account<'info, VaultState>,
 
-    // No `close`  -  account stays alive while cancel votes accumulate
+    // No `close` -  account stays alive while cancel votes accumulate
     #[account(
         mut,
         seeds = [b"swap", vault.key().as_ref(), &swap_nonce.to_le_bytes()],

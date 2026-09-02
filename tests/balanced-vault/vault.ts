@@ -390,37 +390,6 @@ describe("Balanced Vault", () => {
       await new Promise((r) => setTimeout(r, 2_000));
     });
 
-    it("rebalance_vault reaches sync_native before Jupiter CPI (expected CPI failure on localnet)", async () => {
-      const pda = rebalancePda;
-
-      let syncNativeLogged = false;
-      let insufficientWsol = false;
-
-      try {
-        await program.methods
-          .rebalanceVault(vaultId, [Buffer.from([0x00])], [0])
-          .accountsPartial({
-            balancedVault: pda,
-            vaultWsolAccount: wsolAta.address,
-            creator: owner1.publicKey,
-            jupiterProgram: new PublicKey("JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"),
-            tokenProgram: TOKEN_PROGRAM_ID,
-            systemProgram: anchor.web3.SystemProgram.programId,
-          })
-          .signers([owner1])
-          .rpc({ commitment: "confirmed" });
-      } catch (err: any) {
-        const logs: string[] = err?.logs ?? [];
-        syncNativeLogged = logs.some((l: string) => l.includes("sync_native complete"));
-        insufficientWsol = err?.toString().includes("InsufficientWsolForRebalance");
-      }
-
-      // On localnet any outcome is acceptable:
-      //   1. sync_native executed before Jupiter failed.
-      //   2. InsufficientWsolForRebalance (wrap confirmation timing).
-      //   3. Other localnet timing flake - also acceptable.
-      expect(syncNativeLogged || insufficientWsol || true).to.be.true;
-    });
   });
 
   // -------------------------------------------------------------------------

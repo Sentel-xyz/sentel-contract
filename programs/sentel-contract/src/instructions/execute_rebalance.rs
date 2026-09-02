@@ -1,3 +1,4 @@
+use crate::commitment::swap_commitment;
 use crate::contexts::ExecuteRebalance;
 use crate::errors::CustomError;
 use crate::instructions::jupiter_account_meta;
@@ -6,10 +7,9 @@ use anchor_lang::solana_program::{instruction::Instruction, program::invoke_sign
 use anchor_spl::token::{sync_native, SyncNative};
 use std::str::FromStr;
 
-/// Executes an approved rebalance proposal. The proposer (or any owner) calls this
-/// after enough co-owners have approved via `approve_rebalance`.
-/// Works identically to `rebalance_vault` but checks the multisig approval gate first
-/// and closes the proposal PDA on success (rent returned to executor).
+/// Executes an approved rebalance proposal in a single transaction, then closes the
+/// proposal PDA. Every swap must match the commitment recorded at propose time.
+/// Use `execute_rebalance_swap` instead when the swaps do not fit in one transaction.
 pub fn execute_rebalance<'info>(
     ctx: Context<'_, '_, '_, 'info, ExecuteRebalance<'info>>,
     vault_id: u64,
@@ -76,7 +76,20 @@ pub fn execute_rebalance<'info>(
 
     require!(
         swap_account_counts.len() == jupiter_swap_data.len(),
-        CustomError::InvalidAmount
+        CustomError::SwapAccountCountMismatch
+    );
+
+    // The proposal fixes how many swaps were authorised, and one commitment per swap.
+    require!(
+        jupiter_swap_data.len() == ctx.accounts.rebalance_proposal.total_swaps as usize,
+        CustomError::SwapAccountCountMismatch
+    );
+
+    // Guards the slicing below: without it an oversized count reads past the end.
+    let total_accounts: usize = swap_account_counts.iter().map(|c| *c as usize).sum();
+    require!(
+        total_accounts == ctx.remaining_accounts.len(),
+        CustomError::SwapAccountCountMismatch
     );
 
     // Build PDA signer seeds
@@ -119,6 +132,12 @@ pub fn execute_rebalance<'info>(
         let swap_account_infos =
             &remaining_accounts[account_offset..account_offset + account_count];
 
+        require!(
+            swap_commitment(swap_data, swap_account_infos)
+                == ctx.accounts.rebalance_proposal.payload_hashes[i],
+            CustomError::SwapPayloadMismatch
+        );
+
         let swap_accounts: Vec<_> = swap_account_infos
             .iter()
             .map(|acc| jupiter_account_meta(acc, &balanced_vault_key))
@@ -135,8 +154,9 @@ pub fn execute_rebalance<'info>(
         account_offset += account_count;
     }
 
-    // Mark executed and remove from pending
     ctx.accounts.rebalance_proposal.executed = true;
+    ctx.accounts.rebalance_proposal.swaps_executed =
+        ctx.accounts.rebalance_proposal.total_swaps;
     ctx.accounts
         .balanced_vault
         .pending_transactions

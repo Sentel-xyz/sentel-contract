@@ -36,7 +36,7 @@ pub fn propose_transaction(
         ctx.remaining_accounts
     };
 
-    // C-1: Every account treated as a pending transaction PDA must be owned by this program.
+    // Every account treated as a pending transaction PDA must be owned by this program.
     let mut locked_sol_amount: u64 = 0;
     let mut locked_token_amounts: std::collections::HashMap<Pubkey, u64> =
         std::collections::HashMap::new();
@@ -74,7 +74,7 @@ pub fn propose_transaction(
     }
 
     if token_type {
-        // H-3: Token balance check is mandatory  fail hard if no valid token account is provided.
+        // Token balance check is mandatory fail hard if no valid token account is provided.
         let last_account = ctx
             .remaining_accounts
             .last()

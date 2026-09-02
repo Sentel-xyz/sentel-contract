@@ -11,7 +11,7 @@ pub struct CancelTransaction<'info> {
     )]
     pub vault: Account<'info, VaultState>,
 
-    // NOTE: No `close` here  -  the PDA is closed by cleanup_expired or once fully cancelled
+    // NOTE: No `close` here -  the PDA is closed by cleanup_expired or once fully cancelled
     // by a separate close instruction. The account stays alive while cancel votes accumulate.
     #[account(
         mut,

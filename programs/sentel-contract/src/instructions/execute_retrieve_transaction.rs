@@ -1,3 +1,4 @@
+use crate::commitment::swap_commitment;
 use crate::contexts::ExecuteRetrieveTransaction;
 use crate::errors::CustomError;
 use crate::instructions::jupiter_account_meta;
@@ -40,6 +41,14 @@ pub fn execute_retrieve_transaction<'info>(
         CustomError::InsufficientApprovals
     );
 
+    require!(
+        ctx.accounts
+            .balanced_vault
+            .pending_transactions
+            .contains(&tx_id),
+        CustomError::ProposalCancelled
+    );
+
     // Verify the recipient account matches what was proposed
     require!(
         ctx.accounts.recipient.key() == recipient_key,
@@ -65,11 +74,22 @@ pub fn execute_retrieve_transaction<'info>(
             CustomError::InvalidFeeRecipient
         );
 
-        // L-3 fix: ensure swap_account_counts is aligned with swap data to prevent
-        // out-of-bounds slicing and silent account misallocation.
         require!(
             swap_account_counts.len() == jupiter_swap_data.len(),
-            CustomError::InvalidAmount
+            CustomError::SwapAccountCountMismatch
+        );
+
+        require!(
+            jupiter_swap_data.len()
+                == ctx.accounts.retrieve_transaction.payload_hashes.len(),
+            CustomError::SwapAccountCountMismatch
+        );
+
+        // Guards the slicing below: without it an oversized count reads past the end.
+        let total_accounts: usize = swap_account_counts.iter().map(|c| *c as usize).sum();
+        require!(
+            total_accounts == ctx.remaining_accounts.len(),
+            CustomError::SwapAccountCountMismatch
         );
 
         let balanced_vault_key = ctx.accounts.balanced_vault.key();
@@ -81,6 +101,12 @@ pub fn execute_retrieve_transaction<'info>(
 
             let swap_account_infos =
                 &remaining_accounts[account_offset..account_offset + account_count];
+
+            require!(
+                swap_commitment(swap_data, swap_account_infos)
+                    == ctx.accounts.retrieve_transaction.payload_hashes[i],
+                CustomError::SwapPayloadMismatch
+            );
 
             let swap_accounts: Vec<_> = swap_account_infos
                 .iter()
@@ -106,8 +132,8 @@ pub fn execute_retrieve_transaction<'info>(
     // Step 2: Unwrap WSOL -> vault PDA (as native SOL), then distribute fee + net to recipient.
     //
     // We close the WSOL token account into the vault PDA (not directly into recipient) so that
-    // we control the SOL. Then we use direct lamport manipulation  which is legal because the
-    // vault PDA is owned by this program  to send fee to fee_recipient and the rest to recipient.
+    // we control the SOL. Then we use direct lamport manipulation which is legal because the
+    // vault PDA is owned by this program to send fee to fee_recipient and the rest to recipient.
     // This avoids Anchor's post-instruction lamport conservation error that occurs when you mix
     // direct lamport changes on Anchor-tracked accounts with subsequent CPIs.
     let wsol_lamports = ctx.accounts.vault_wsol_account.to_account_info().lamports();
@@ -121,10 +147,11 @@ pub fn execute_retrieve_transaction<'info>(
         .unwrap_or(0);
     let fee_amount = raw_fee
         .max(crate::MIN_FEE_LAMPORTS)
-        .min(crate::MAX_FEE_LAMPORTS);
+        .min(crate::MAX_FEE_LAMPORTS)
+        .min(effective_wsol);
 
     // CPI first: close WSOL token account, sending all lamports into the vault PDA.
-    // After this CPI completes, no more CPIs  only direct lamport manipulation.
+    // After this CPI completes, no more CPIs only direct lamport manipulation.
     let cpi_accounts = CloseAccount {
         account: ctx.accounts.vault_wsol_account.to_account_info(),
         destination: ctx.accounts.balanced_vault.to_account_info(),
@@ -147,9 +174,8 @@ pub fn execute_retrieve_transaction<'info>(
         let fee_info = ctx.accounts.fee_recipient.to_account_info();
         let recipient_info = ctx.accounts.recipient.to_account_info();
 
-        // M-3: Fee is calculated on effective_wsol (excluding rent), so net to recipient is
-        // also based on effective_wsol. The rent portion stays in the vault (returned naturally
-        // when the token account is closed back into the vault PDA).
+        // The fee is taken from effective_wsol, so the recipient's share comes from the
+        // same base. The rent portion stays in the vault and is returned when it closes.
         let net_to_recipient = effective_wsol
             .checked_sub(fee_amount)
             .ok_or(CustomError::InsufficientFunds)?;

@@ -59,7 +59,7 @@ pub fn wrap_sol_for_rebalance(ctx: Context<WrapSolForRebalance>, _vault_id: u64)
     // The vault PDA is owned by this program so we can modify its lamports.
     // We can add lamports to the WSOL ATA (owned by Token program) because
     // only REMOVING lamports from another program's account is restricted.
-    // NOTE: No CPI is done after this  sync_native must be called in the next transaction.
+    // NOTE: No CPI is done after this sync_native must be called in the next transaction.
     **vault_info.try_borrow_mut_lamports()? = vault_info
         .lamports()
         .checked_sub(available_sol)

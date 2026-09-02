@@ -35,6 +35,7 @@ import {
   LAMPORTS_PER_SOL,
   PublicKey,
 } from "@solana/web3.js";
+import { EMPTY_COMMITMENT } from "../helpers/commitment";
 
 // ---------------------------------------------------------------------------
 // Program-level constants (must match lib.rs)
@@ -1048,7 +1049,7 @@ describe("Vault (multisig)", () => {
       const sp    = swapPda(program.programId, vault, nonce);
 
       await program.methods
-        .proposeSwap(inputMint, outputMint, new BN(100_000_000), new BN(95_000_000), new BN(VAULT_ID), creator)
+        .proposeSwap(inputMint, outputMint, new BN(100_000_000), new BN(95_000_000), EMPTY_COMMITMENT, new BN(VAULT_ID), creator)
         .accountsPartial({ vault, swapTransaction: sp, proposer: creator, systemProgram: anchor.web3.SystemProgram.programId })
         .remainingAccounts([{ pubkey: vaultInputAta.address, isSigner: false, isWritable: false }])
         .rpc();
@@ -1067,7 +1068,7 @@ describe("Vault (multisig)", () => {
       const sp    = swapPda(program.programId, vault, nonce);
       try {
         await program.methods
-          .proposeSwap(inputMint, outputMint, new BN(0), new BN(95_000_000), new BN(VAULT_ID), creator)
+          .proposeSwap(inputMint, outputMint, new BN(0), new BN(95_000_000), EMPTY_COMMITMENT, new BN(VAULT_ID), creator)
           .accountsPartial({ vault, swapTransaction: sp, proposer: creator, systemProgram: anchor.web3.SystemProgram.programId })
           .rpc();
         expect.fail("expected InvalidAmount");
@@ -1081,7 +1082,7 @@ describe("Vault (multisig)", () => {
       const prev  = swapPda(program.programId, vault, nonce - 1);
       try {
         await program.methods
-          .proposeSwap(inputMint, outputMint, new BN(950_000_000), new BN(900_000_000), new BN(VAULT_ID), creator)
+          .proposeSwap(inputMint, outputMint, new BN(950_000_000), new BN(900_000_000), EMPTY_COMMITMENT, new BN(VAULT_ID), creator)
           .accountsPartial({ vault, swapTransaction: sp, proposer: creator, systemProgram: anchor.web3.SystemProgram.programId })
           .remainingAccounts([
             { pubkey: prev, isSigner: false, isWritable: false },
@@ -1169,7 +1170,7 @@ describe("Vault (multisig)", () => {
       const sp    = swapPda(program.programId, vault, nonce);
 
       await program.methods
-        .proposeSwap(inputMint, outputMint, new BN(50_000_000), new BN(45_000_000), new BN(VAULT_ID), creator)
+        .proposeSwap(inputMint, outputMint, new BN(50_000_000), new BN(45_000_000), EMPTY_COMMITMENT, new BN(VAULT_ID), creator)
         .accountsPartial({ vault, swapTransaction: sp, proposer: creator, systemProgram: anchor.web3.SystemProgram.programId })
         .remainingAccounts([{ pubkey: vaultInputAta.address, isSigner: false, isWritable: false }])
         .rpc();
@@ -1211,7 +1212,7 @@ describe("Vault (multisig)", () => {
       const sp    = swapPda(program.programId, cv, nonce);
 
       await program.methods
-        .proposeSwap(inputMint, outputMint, new BN(10_000_000), new BN(9_000_000), new BN(CANCEL_VAULT_ID), creator)
+        .proposeSwap(inputMint, outputMint, new BN(10_000_000), new BN(9_000_000), EMPTY_COMMITMENT, new BN(CANCEL_VAULT_ID), creator)
         .accountsPartial({ vault: cv, swapTransaction: sp, proposer: creator, systemProgram: anchor.web3.SystemProgram.programId })
         .remainingAccounts([{ pubkey: cvInputAta.address, isSigner: false, isWritable: false }])
         .rpc();
@@ -1268,7 +1269,7 @@ describe("Vault (multisig)", () => {
       const sp    = swapPda(program.programId, vault, nonce);
 
       await program.methods
-        .proposeSolSwap(outputMint, new BN(swapAmount), new BN(minOutput), new BN(VAULT_ID), creator)
+        .proposeSolSwap(outputMint, new BN(swapAmount), new BN(minOutput), EMPTY_COMMITMENT, new BN(VAULT_ID), creator)
         .accountsPartial({
           vault, swapTransaction: sp, vaultWsolAccount: vaultWsolAta,
           proposer: creator,
@@ -1294,7 +1295,7 @@ describe("Vault (multisig)", () => {
       const sp = swapPda(program.programId, vault, (await program.account.vaultState.fetch(vault)).nonce.toNumber());
       try {
         await program.methods
-          .proposeSolSwap(outputMint, new BN(0), new BN(1_000_000), new BN(VAULT_ID), creator)
+          .proposeSolSwap(outputMint, new BN(0), new BN(1_000_000), EMPTY_COMMITMENT, new BN(VAULT_ID), creator)
           .accountsPartial({ vault, swapTransaction: sp, vaultWsolAccount: vaultWsolAta, proposer: creator, tokenProgram: TOKEN_PROGRAM_ID, systemProgram: anchor.web3.SystemProgram.programId })
           .rpc();
         expect.fail("expected InvalidAmount");
@@ -1305,7 +1306,7 @@ describe("Vault (multisig)", () => {
       const sp = swapPda(program.programId, vault, (await program.account.vaultState.fetch(vault)).nonce.toNumber());
       try {
         await program.methods
-          .proposeSolSwap(outputMint, new BN(10_000_000), new BN(0), new BN(VAULT_ID), creator)
+          .proposeSolSwap(outputMint, new BN(10_000_000), new BN(0), EMPTY_COMMITMENT, new BN(VAULT_ID), creator)
           .accountsPartial({ vault, swapTransaction: sp, vaultWsolAccount: vaultWsolAta, proposer: creator, tokenProgram: TOKEN_PROGRAM_ID, systemProgram: anchor.web3.SystemProgram.programId })
           .rpc();
         expect.fail("expected InvalidAmount");
@@ -1325,7 +1326,7 @@ describe("Vault (multisig)", () => {
 
       try {
         await program.methods
-          .proposeSolSwap(outputMint, new BN(10_000_000), new BN(1_000_000), new BN(701), creator)
+          .proposeSolSwap(outputMint, new BN(10_000_000), new BN(1_000_000), EMPTY_COMMITMENT, new BN(701), creator)
           .accountsPartial({ vault: poorVault, swapTransaction: sp, vaultWsolAccount: poorWsol, proposer: creator, tokenProgram: TOKEN_PROGRAM_ID, systemProgram: anchor.web3.SystemProgram.programId })
           .rpc();
         expect.fail("expected InsufficientFunds");
@@ -1336,7 +1337,7 @@ describe("Vault (multisig)", () => {
       const sp = swapPda(program.programId, vault, (await program.account.vaultState.fetch(vault)).nonce.toNumber());
       try {
         await program.methods
-          .proposeSolSwap(outputMint, new BN(10_000_000), new BN(1_000_000), new BN(VAULT_ID), creator)
+          .proposeSolSwap(outputMint, new BN(10_000_000), new BN(1_000_000), EMPTY_COMMITMENT, new BN(VAULT_ID), creator)
           .accountsPartial({ vault, swapTransaction: sp, vaultWsolAccount: vaultWsolAta, proposer: owner2.publicKey, tokenProgram: TOKEN_PROGRAM_ID, systemProgram: anchor.web3.SystemProgram.programId })
           .signers([owner2])
           .rpc();
@@ -1350,7 +1351,7 @@ describe("Vault (multisig)", () => {
       const sp    = swapPda(program.programId, vault, nonce);
 
       await program.methods
-        .proposeSolSwap(outputMint, new BN(20_000_000), new BN(1_000), new BN(VAULT_ID), creator)
+        .proposeSolSwap(outputMint, new BN(20_000_000), new BN(1_000), EMPTY_COMMITMENT, new BN(VAULT_ID), creator)
         .accountsPartial({ vault, swapTransaction: sp, vaultWsolAccount: vaultWsolAta, proposer: creator, tokenProgram: TOKEN_PROGRAM_ID, systemProgram: anchor.web3.SystemProgram.programId })
         .rpc();
 

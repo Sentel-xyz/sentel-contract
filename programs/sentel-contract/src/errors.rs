@@ -110,4 +110,20 @@ pub enum CustomError {
     RebalanceProposalNotFound,
     #[msg("Insufficient approvals to execute rebalance")]
     InsufficientApprovalsForRebalance,
+    #[msg("Swap payload does not match the approved commitment")]
+    SwapPayloadMismatch,
+    #[msg("Swap index does not match the number of swaps already executed")]
+    InvalidSwapIndex,
+    #[msg("Account count does not match the accounts supplied")]
+    SwapAccountCountMismatch,
+    #[msg("Too many swaps - maximum of 10 allowed per proposal")]
+    TooManySwaps,
+    #[msg("Rebalance proposal is not fully executed yet")]
+    RebalanceNotFullyExecuted,
+    #[msg("Swap output is below the approved minimum")]
+    SwapOutputBelowMinimum,
+    #[msg("Swap consumed more input than was approved")]
+    SwapInputExceeded,
+    #[msg("Amount is too small to cover the protocol fee")]
+    AmountBelowMinimumFee,
 }

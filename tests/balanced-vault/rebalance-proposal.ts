@@ -43,6 +43,7 @@ import {
   createInitializeAccountInstruction,
 } from "@solana/spl-token";
 import { expect } from "chai";
+import { EMPTY_COMMITMENT } from "../helpers/commitment";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -229,7 +230,7 @@ describe("Rebalance Proposal Flow", () => {
     );
 
     await program.methods
-      .proposeRebalance(vaultId, proposalNonce)
+      .proposeRebalance(vaultId, proposalNonce, [EMPTY_COMMITMENT])
       .accountsPartial({
         balancedVault:    balancedVaultPda,
         rebalanceProposal: proposalPda,
@@ -271,7 +272,7 @@ describe("Rebalance Proposal Flow", () => {
     let threw = false;
     try {
       await program.methods
-        .proposeRebalance(vaultId, nextNonce)
+        .proposeRebalance(vaultId, nextNonce, [EMPTY_COMMITMENT])
         .accountsPartial({
           balancedVault:    balancedVaultPda,
           rebalanceProposal: nextProposalPda,
@@ -504,7 +505,7 @@ describe("Rebalance Proposal Flow", () => {
     );
 
     await program.methods
-      .proposeRebalance(vaultId, cancelNonce)
+      .proposeRebalance(vaultId, cancelNonce, [EMPTY_COMMITMENT])
       .accountsPartial({
         balancedVault:    balancedVaultPda,
         rebalanceProposal: cancelProposalPda,
@@ -638,7 +639,7 @@ describe("Rebalance Proposal Flow", () => {
     expect(await provider.connection.getAccountInfo(newPda)).to.be.null;
 
     await program.methods
-      .proposeRebalance(vaultId, nextNonce)
+      .proposeRebalance(vaultId, nextNonce, [EMPTY_COMMITMENT])
       .accountsPartial({
         balancedVault:    balancedVaultPda,
         rebalanceProposal: newPda,

@@ -34,6 +34,11 @@ pub fn execute_transaction(
         CustomError::InsufficientApprovals
     );
 
+    require!(
+        vault.pending_transactions.contains(&transaction.id),
+        CustomError::ProposalCancelled
+    );
+
     // Prevent self-transfers: target must not be the vault itself or the fee recipient.
     require!(
         transaction.target != vault.key(),
@@ -76,10 +81,19 @@ pub fn execute_transaction(
             CustomError::InvalidMint
         );
 
-        // Verify vault owns the source token account
         require!(
             vault_token_account.owner == vault.key(),
             CustomError::InvalidTokenAccount
+        );
+
+        // For token transfers `transaction.target` is the destination token account
+        // itself. The context constrains `target` against it, but the account the
+        // transfer actually credits is `target_token_account`, which was unconstrained:
+        // an executor could satisfy the constraint with the approved account and still
+        // pass their own here. Pin the account that receives the tokens.
+        require!(
+            ctx.accounts.target_token_account.key() == transaction.target,
+            CustomError::InvalidTarget
         );
 
         // For SPL tokens, charge only the minimum fee (flat rate)
